@@ -1,15 +1,14 @@
 import sqlite3
 from pathlib import Path
 
-DB_PATH = Path("shortener.db")
+DEFAULT_DB_PATH = Path("shortener.db")
+
+def get_connection(db_path: Path = DEFAULT_DB_PATH):
+    return sqlite3.connect(db_path)
 
 
-def get_connection():
-    return sqlite3.connect(DB_PATH)
-
-
-def init_db():
-    with get_connection() as conn:
+def init_db(db_path: Path = DEFAULT_DB_PATH):
+    with get_connection(db_path) as conn:
         cursor = conn.cursor()
         cursor.execute(
             """
