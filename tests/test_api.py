@@ -1,6 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
+import sqlite3
 from app.main import app, get_db_path
 from app.database import init_db
 from app.repository import insert_url, get_url_by_code
@@ -8,21 +9,28 @@ from app.service import generate_code
 
 TEST_DB = Path("test.db")
 
+
+def clear_tables(db_path):
+    with sqlite3.connect(db_path) as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM urls")
+        conn.commit()
+
+
 @pytest.fixture(scope="module")
 def client():
-    if TEST_DB.exists():
-        TEST_DB.unlink()
-    init_db(db_path=TEST_DB)
+    if not TEST_DB.exists():
+        init_db(db_path=TEST_DB)
+    else:
+        clear_tables(TEST_DB)
     
     app.dependency_overrides[get_db_path] = lambda: TEST_DB
 
     with TestClient(app) as client:
         yield client
 
-    app.dependency_overrides[get_db_path] = lambda: TEST_DB
+    app.dependency_overrides.clear()
 
-    if TEST_DB.exists():
-        TEST_DB.unlink()
 
 def test_create_shorten_url(client):
     response = client.post("/shorten", json={"url": "https://example.com"})
@@ -47,7 +55,6 @@ def test_redirect(client):
     assert response.headers["location"] == "https://example.com"
 
 def test_404_redirect(client):
-    """404 если код не найден"""
     response = client.get("/nonexistentcode", follow_redirects=False)
     assert response.status_code == 404
     assert response.json()["detail"] == "URL not found"
