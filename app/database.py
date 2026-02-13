@@ -4,7 +4,9 @@ from pathlib import Path
 DEFAULT_DB_PATH = Path("shortener.db")
 
 def get_connection(db_path: Path = DEFAULT_DB_PATH):
-    return sqlite3.connect(db_path)
+    conn = sqlite3.connect(db_path)
+    conn.isolation_level = None  # для автоматического commit/close
+    return conn
 
 
 def init_db(db_path: Path = DEFAULT_DB_PATH):

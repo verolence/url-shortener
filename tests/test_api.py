@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 from pathlib import Path
-from app.main import app
+from app.main import app, get_db_path
 from app.database import init_db
 from app.repository import insert_url, get_url_by_code
 from app.service import generate_code
@@ -13,8 +13,13 @@ def client():
     if TEST_DB.exists():
         TEST_DB.unlink()
     init_db(db_path=TEST_DB)
+    
+    app.dependency_overrides[get_db_path] = lambda: TEST_DB
 
-    yield TestClient(app)
+    with TestClient(app) as client:
+        yield client
+
+    app.dependency_overrides[get_db_path] = lambda: TEST_DB
 
     if TEST_DB.exists():
         TEST_DB.unlink()
